@@ -1,0 +1,6 @@
+fastapi
+pymongo
+pydantic
+python-dotenv
+argon2-cffi
+dnspython
