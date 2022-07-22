@@ -3,6 +3,7 @@ import os
 from fastapi import FastAPI, status
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -14,6 +15,13 @@ load_dotenv()
 hasher = PasswordHasher()
 app = FastAPI(title="Survey App", version="1.0.0")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class User(BaseModel):
     """Class that contains a basic information about a user.
