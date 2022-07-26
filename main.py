@@ -1,4 +1,4 @@
-"""The file is the server for our application named ""Survey App"""
+"""The file is the server for our application named "Survey App"."""
 import os
 from fastapi import FastAPI, status
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -22,6 +22,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 class User(BaseModel):
     """Class that contains a basic information about a user.
@@ -63,13 +64,6 @@ class Form(BaseModel):
     questions: list | None
 
 
-types_of_input = [
-    "checkbox",
-    "radio",
-    "text"
-]
-
-
 class Question(BaseModel):
     """A class the contains the basic information in a question.
 
@@ -81,24 +75,19 @@ class Question(BaseModel):
     form_id: str
         The ID of the form to be connected to the question
 
-    question: str
-        The question itself
-
-    type_of_input: str
-        The type of input box that user should fill up
-
-    possible_answers: list | None
-        The possible answers that the user can answer
+    name: str
+        The name of the question
 
     answers: list
         The answers to that question
+
+    required: bool
+        The question is required or not
     """
 
     username: str
     form_id: str
-    question: str
-    type_of_input: str
-    possible_answers: list | None
+    name: str
     answers: list | None
 
 
@@ -313,4 +302,132 @@ def add_question(question: Question):
     form_founded = forms_collection.find_one({
         "id": question.form_id
     })
+    if form_founded is None:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "The form is not found"
+            }
+        )
     print(form_founded)
+    questions_founded = form_founded["questions"]
+    for question_founded in questions_founded:
+        if question_founded["name"] == question.name:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error":
+                    """Another question exists,
+                    please try again with another question"""
+                }
+            )
+    questions_founded.append(
+        {
+            "name": question.name,
+            "answers": [],
+        }
+    )
+    forms_collection.update_one(
+        {
+            "id": question.form_id
+        },
+        {
+            "$set": {
+                "questions": questions_founded
+            }
+        }
+    )
+    form_founded["_id"] = str(form_founded["_id"])
+    return form_founded
+
+
+@app.post("/answer/{form_id}")
+def answer_form(form_id, answers: list):
+    """The function take the form id, then insert the answer in the answers.
+
+    Parameters
+    ----------
+    form_id
+        The ID of the form that will insert the answer
+
+    answers: list
+        The answers that the user gave
+    """
+    form_founded = forms_collection.find_one({
+        "id": form_id
+    })
+
+    questions = form_founded["questions"]
+
+    if form_founded is None:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "The form is not found"
+            }
+        )
+    if not answers:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "The answers are blank"
+            }
+        )
+    for answer in answers:
+        if type(answer) is not dict:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "The answer should be in a dictionary/JSON"
+                }
+            )
+        try:
+            if not answer["question"] or not answer["answer"]:
+                return JSONResponse(
+                    status_code=400,
+                    content={
+                        "error": "The question or the answer is blank"
+                    }
+                )
+            question_names = []
+            for question in questions:
+                question_names.append(question["name"])
+            if not question_names:
+                return JSONResponse(
+                    status_code=400,
+                    content={
+                        "error":
+                        """The user haven't created a question in the form yet,
+                        please try again"""
+                    }
+                )
+            for i, question_name in enumerate(question_names):
+                if answer["question"] not in question_names:
+                    return JSONResponse(
+                        status_code=400,
+                        content={
+                            "error": "The question is not in the form"
+                        }
+                    )
+                answers_found = form_founded["questions"][i]["answers"]
+                if answer["question"] == question_name:
+                    answers_found.append(answer["answer"])
+                    forms_collection.update_one(
+                        {
+                            "id": form_id
+                        },
+                        {
+                            "$set": {
+                                f"questions.{i}.answers": answers_found
+                            }
+                        }
+                    )
+                    form_founded["_id"] = str(form_founded["_id"])
+                    return form_founded
+        except KeyError:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "The question or the answer is blank"
+                }
+            )
