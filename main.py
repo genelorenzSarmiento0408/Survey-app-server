@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
+
 # from jwt import encode
 load_dotenv()
 
@@ -117,9 +118,7 @@ def find_user(username: str):
     pymongo.collection.Collection | None
         Returns a collection if a user has found in the database.
     """
-    return users_collection.find_one({
-        "username": username
-    })
+    return users_collection.find_one({"username": username})
 
 
 @app.get("/")
@@ -135,7 +134,7 @@ async def validation_exception_handler(exc: RequestValidationError):
         status_code=422,
         content={
             "detail": exc.errors(),
-            "error": "One or more of the information filled up is blank"
+            "error": "One or more of the information filled up is blank",
         },
     )
 
@@ -159,16 +158,11 @@ def register_user(user: User):
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={
-                "error":
-                "The username has been found, please try another username"
-            }
+                "error": "The username has been found, please try another username"
+            },
         )
     password = hasher.hash(user.password)
-    data = {
-        "username": user.username,
-        "password": password,
-        "forms": []
-    }
+    data = {"username": user.username, "password": password, "forms": []}
     forms_collection.insert_one(data)
     data["_id"] = str(data["_id"])
     return data
@@ -190,8 +184,7 @@ def login_user(user: User):
     user_founded = find_user(user.username)
     if user_founded is None:
         return JSONResponse(
-            status_code=200,
-            content={"error": "User not found, please register"}
+            status_code=200, content={"error": "User not found, please register"}
         )
     user_founded["_id"] = str(user_founded["_id"])
     user_founded["user_id"] = str(user_founded["_id"])
@@ -200,7 +193,7 @@ def login_user(user: User):
     except VerifyMismatchError:
         return JSONResponse(
             status_code=400,
-            content={"error": "The username and password doesn't match"}
+            content={"error": "The username and password doesn't match"},
         )
     return user_founded
 
@@ -216,13 +209,8 @@ def get_user(username: str):
     """
     username_found = find_user(username)
     if username_found is None:
-        return JSONResponse(
-            status_code=400,
-            content={"error": "Username not found"}
-        )
-    forms_found = forms_collection.find({
-        "username": username
-    })
+        return JSONResponse(status_code=400, content={"error": "Username not found"})
+    forms_found = forms_collection.find({"username": username})
     if forms_found is None:
         return []
     forms = []
@@ -248,17 +236,11 @@ def post_form(form: Form):
     user_founded = find_user(form.username)
     print(user_founded)
     if user_founded is None:
-        return JSONResponse(
-            status_code=400,
-            content={"error": "User not found"}
-        )
+        return JSONResponse(status_code=400, content={"error": "User not found"})
     if form.name == "":
         return JSONResponse(
             status_code=400,
-            content={
-                "error":
-                "The name of the form is blank, please try again"
-            }
+            content={"error": "The name of the form is blank, please try again"},
         )
     if form.questions is None:
         questions = []
@@ -268,14 +250,12 @@ def post_form(form: Form):
         "username": user_founded["username"],
         "name": form.name,
         "description": description,
-        "questions": questions
+        "questions": questions,
     }
     forms_collection.insert_one(data)
     forms_collection.find_one_and_update(
         {"_id": data["_id"]},
-        {"$set": {
-            "id": str(data["_id"])
-        }},
+        {"$set": {"id": str(data["_id"])}},
     )
     data["_id"] = str(data["_id"])
     data["id"] = str(data["_id"])
@@ -295,20 +275,12 @@ def add_question(question: Question):
         return JSONResponse(
             status_code=400,
             content={
-                "error":
-                "The form id is blank, please try again with the form form id"
-            }
+                "error": "The form id is blank, please try again with the form form id"
+            },
         )
-    form_founded = forms_collection.find_one({
-        "id": question.form_id
-    })
+    form_founded = forms_collection.find_one({"id": question.form_id})
     if form_founded is None:
-        return JSONResponse(
-            status_code=400,
-            content={
-                "error": "The form is not found"
-            }
-        )
+        return JSONResponse(status_code=400, content={"error": "The form is not found"})
     print(form_founded)
     questions_founded = form_founded["questions"]
     for question_founded in questions_founded:
@@ -316,10 +288,9 @@ def add_question(question: Question):
             return JSONResponse(
                 status_code=400,
                 content={
-                    "error":
-                    """Another question exists,
+                    "error": """Another question exists,
                     please try again with another question"""
-                }
+                },
             )
     questions_founded.append(
         {
@@ -328,14 +299,7 @@ def add_question(question: Question):
         }
     )
     forms_collection.update_one(
-        {
-            "id": question.form_id
-        },
-        {
-            "$set": {
-                "questions": questions_founded
-            }
-        }
+        {"id": question.form_id}, {"$set": {"questions": questions_founded}}
     )
     form_founded["_id"] = str(form_founded["_id"])
     return form_founded
@@ -353,41 +317,25 @@ def answer_form(form_id, answers: list):
     answers: list
         The answers that the user gave
     """
-    form_founded = forms_collection.find_one({
-        "id": form_id
-    })
+    form_founded = forms_collection.find_one({"id": form_id})
 
     questions = form_founded["questions"]
 
     if form_founded is None:
-        return JSONResponse(
-            status_code=400,
-            content={
-                "error": "The form is not found"
-            }
-        )
+        return JSONResponse(status_code=400, content={"error": "The form is not found"})
     if not answers:
-        return JSONResponse(
-            status_code=400,
-            content={
-                "error": "The answers are blank"
-            }
-        )
+        return JSONResponse(status_code=400, content={"error": "The answers are blank"})
     for answer in answers:
         if type(answer) is not dict:
             return JSONResponse(
                 status_code=400,
-                content={
-                    "error": "The answer should be in a dictionary/JSON"
-                }
+                content={"error": "The answer should be in a dictionary/JSON"},
             )
         try:
             if not answer["question"] or not answer["answer"]:
                 return JSONResponse(
                     status_code=400,
-                    content={
-                        "error": "The question or the answer is blank"
-                    }
+                    content={"error": "The question or the answer is blank"},
                 )
             question_names = []
             for question in questions:
@@ -396,38 +344,27 @@ def answer_form(form_id, answers: list):
                 return JSONResponse(
                     status_code=400,
                     content={
-                        "error":
-                        """The user haven't created a question in the form yet,
+                        "error": """The user haven't created a question in the form yet,
                         please try again"""
-                    }
+                    },
                 )
             for i, question_name in enumerate(question_names):
                 if answer["question"] not in question_names:
                     return JSONResponse(
                         status_code=400,
-                        content={
-                            "error": "The question is not in the form"
-                        }
+                        content={"error": "The question is not in the form"},
                     )
                 answers_found = form_founded["questions"][i]["answers"]
                 if answer["question"] == question_name:
                     answers_found.append(answer["answer"])
                     forms_collection.update_one(
-                        {
-                            "id": form_id
-                        },
-                        {
-                            "$set": {
-                                f"questions.{i}.answers": answers_found
-                            }
-                        }
+                        {"id": form_id},
+                        {"$set": {f"questions.{i}.answers": answers_found}},
                     )
                     form_founded["_id"] = str(form_founded["_id"])
                     return form_founded
         except KeyError:
             return JSONResponse(
                 status_code=400,
-                content={
-                    "error": "The question or the answer is blank"
-                }
+                content={"error": "The question or the answer is blank"},
             )
