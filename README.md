@@ -1,5 +1,16 @@
 # Survey app server
 
+
+## How to Install (in development)
+
+1. Creating Virtual environment
+`python -m venv <name_of_vitual_env>` 
+2. Installing all things in requirements.txt
+`pip install -r requirements.txt`
+3. Change DB_URL in .env, to your database URL
+4. run in development
+`uvicorn main:app --reload`
+
 ## Session Logs
 
 ### First Session
