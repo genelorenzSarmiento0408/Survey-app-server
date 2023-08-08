@@ -191,7 +191,7 @@ def login_user(user: User):
             status_code=400,
             content={"error": "The username and password doesn't match"},
         )
-    return user_founded
+    return {"status": "OK"}
 
 
 @app.get("/users/{username}")
