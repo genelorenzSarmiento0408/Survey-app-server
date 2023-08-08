@@ -180,7 +180,7 @@ def login_user(user: User):
     user_founded = find_user(user.username)
     if user_founded is None:
         return JSONResponse(
-            status_code=200, content={"error": "User not found, please register"}
+            status_code=400, content={"error": "User not found, please register"}
         )
     user_founded["_id"] = str(user_founded["_id"])
     user_founded["user_id"] = str(user_founded["_id"])
