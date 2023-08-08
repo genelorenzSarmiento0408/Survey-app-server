@@ -92,7 +92,7 @@ class Question(BaseModel):
     answers: list | None
 
 
-CONNECTION_STRING = os.getenv("CONNECTION_STRING")
+CONNECTION_STRING = os.getenv("DB_URL")
 
 
 def get_db():
@@ -162,8 +162,8 @@ def register_user(user: User):
             },
         )
     password = hasher.hash(user.password)
-    data = {"username": user.username, "password": password, "forms": []}
-    forms_collection.insert_one(data)
+    data = {"username": user.username, "password": password}
+    users_collection.insert_one(data)
     data["_id"] = str(data["_id"])
     return data
 
