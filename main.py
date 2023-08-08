@@ -46,7 +46,7 @@ class Form(BaseModel):
 
     Attributes
     ----------
-    username: str
+    author: str
         The username of the author of the Form
 
     name: str
@@ -54,15 +54,11 @@ class Form(BaseModel):
 
     description: str | None
         The description of the form
-
-    questions: list | None
-        The questions in the form
     """
 
-    username: str
+    author: str
     name: str
     description: str | None
-    questions: list | None
 
 
 class Question(BaseModel):
@@ -233,7 +229,7 @@ def post_form(form: Form):
     ------
 
     """
-    user_founded = find_user(form.username)
+    user_founded = find_user(form.author)
     print(user_founded)
     if user_founded is None:
         return JSONResponse(status_code=400, content={"error": "User not found"})
@@ -242,23 +238,17 @@ def post_form(form: Form):
             status_code=400,
             content={"error": "The name of the form is blank, please try again"},
         )
-    if form.questions is None:
-        questions = []
-    if form.description is None:
-        description = ""
     data = {
-        "username": user_founded["username"],
+        "author": user_founded["username"],
         "name": form.name,
-        "description": description,
-        "questions": questions,
+        "description": form.description or "",
     }
     forms_collection.insert_one(data)
+    data["_id"] = str(data["_id"])
     forms_collection.find_one_and_update(
         {"_id": data["_id"]},
         {"$set": {"id": str(data["_id"])}},
     )
-    data["_id"] = str(data["_id"])
-    data["id"] = str(data["_id"])
     return data
 
 
@@ -295,7 +285,6 @@ def add_question(question: Question):
     questions_founded.append(
         {
             "name": question.name,
-            "answers": [],
         }
     )
     forms_collection.update_one(
