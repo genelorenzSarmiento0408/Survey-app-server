@@ -194,7 +194,7 @@ def login_user(user: User):
     return {"status": "OK"}
 
 
-@app.get("/users/{username}")
+@app.get("/forms/{username}")
 def get_user(username: str):
     """Returns the forms created by the user.
 
